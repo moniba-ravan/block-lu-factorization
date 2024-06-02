@@ -150,7 +150,35 @@ void block_lu(int N, int block_size, double* A) {
         }
     }
 }
+void display(double* A, int N) {
+    /*
+    Display the matrix A.
+    
+    Parameters:
+        A : double pointer
+            Pointer to the matrix A.
+        N : int
+            Size of the matrix A.
+    */
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            printf("%f ", A[i * N + j]);
+        }
+        printf("\n");
+    }
+}
 
+void write_to_file(int serial_or_parallel, int N, int block_size, double runtime) {
+    FILE *file = fopen("runtimes.txt", "a");
+    if (file == NULL) {
+        printf("Error opening file.\n");
+        return;
+    }
+    
+    fprintf(file, "%d, %d, %d, %.2f\n", serial_or_parallel, N, block_size, runtime);
+    
+    fclose(file);
+}
 int main(int argc, char *argv[]) {
     if (argc != 2) {
         printf("Usage: %s N\n", argv[0]);
@@ -174,31 +202,18 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    // double A[9] = {
-    //     1, 2, 3,
-    //     3, 1, 4,
-    //     5, 3, 1
-    // };
 
-    printf("Original matrix A:\n");
-    // for (int i = 0; i < N; i++) {
-    //     for (int j = 0; j < N; j++) {
-    //         printf("%f ", A[i * N + j]);
-    //     }
-    //     printf("\n");
-    // }
+    // printf("Original matrix A:\n");
+    // display(A, N);
 
     double start_time = clock() / CLOCKS_PER_SEC; // Start timer
     block_lu(N, block_size, A);
     double end_time = clock() / CLOCKS_PER_SEC;
 
-    printf("\nLU-decomposed matrix A:\n");
-    // for (int i = 0; i < N; i++) {
-    //     for (int j = 0; j < N; j++) {
-    //         printf("%f ", A[i * N + j]);
-    //     }
-    //     printf("\n");
-    // }
+    // printf("\nLU-decomposed matrix A:\n");
+    // display(A, N);
+
     printf("\nExecution Time: %f seconds\n", end_time - start_time);
+    write_to_file(0, N, block_size, end_time - start_time);
     return 0;
 }
