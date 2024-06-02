@@ -18,8 +18,10 @@ Various experiments were conducted to test the implementation's performance on d
 
 ### Usage
 Compile and Run the executable:
-    ```sh
+    ```
+    
     ./parallel_lu N block_size n_threads
+    
     ./seriel_lu N 
     ```
 
