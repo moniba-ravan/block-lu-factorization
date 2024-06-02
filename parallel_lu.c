@@ -14,7 +14,7 @@ void lu(double* A, int n) {
         n : int
             Size of the matrix A.
     */
-    for (int k = 0; k < n; k++) {
+    for (int k = 0; k < n; k++) { 
         // vectorized
         #pragma omp simd
         for (int i = k + 1; i < n; i++) {
@@ -222,10 +222,17 @@ int main(int argc, char *argv[]) {
     }
 
     if (N == 3) {
+        // Verifying the correctness of the algorithm
         double temp[] = {1.0, 2.0, 3.0, 3.0, 1.0, 4.0, 5.0, 3.0, 1.0};
         for (int i = 0; i < N * N; i++) {
             A[i] = temp[i];
         }
+        /*
+        LU in A should be 
+        1 2 3
+        3 -5 -5
+        5 1.4 -7
+        */
     } else {
         srand(time(NULL));
         for (int i = 0; i < N; i++) {
