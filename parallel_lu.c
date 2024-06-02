@@ -91,9 +91,17 @@ void block_lu(int N, int block_size, double* A) {
     }
 }
 
-int main() {
-    int N = 10000;
-    int block_size = 500;
+int main(int argc, char *argv[]) {
+    if (argc != 4) {
+        printf("Usage: %s N block_size n_threads\n", argv[0]);
+        return 1;
+    }
+
+    int N = atoi(argv[1]); // Matrix size
+    int block_size = atoi(argv[2]); // Block size
+    int n_threads = atoi(argv[3]); // Number of threads
+
+    omp_set_num_threads(n_threads); 
 
     double* A = (double*)malloc(N * N * sizeof(double));
     if (A == NULL) {
