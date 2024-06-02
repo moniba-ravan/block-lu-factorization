@@ -23,6 +23,7 @@ Compile and Run the executable:
     ./parallel_lu N block_size n_threads
     
     ./seriel_lu N 
+    
     ```
 
 ### Acknowledgements
