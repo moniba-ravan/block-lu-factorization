@@ -3,6 +3,16 @@
 #include <time.h>
 
 void lu(double* A, int n) {
+    /*
+    Perform serial LU-decomposition on matrix A
+    and overwrite A.
+    
+    Parameters:
+        A : double pointer
+            Pointer to the matrix A.
+        n : int
+            Size of the matrix A.
+    */
     for (int k = 0; k < n; k++) {
         for (int i = k + 1; i < n; i++) {
             A[i * n + k] /= A[k * n + k];
@@ -16,6 +26,21 @@ void lu(double* A, int n) {
 }
 
 void back_substitution(double* U, double* Y, int num_vectors, int m) {
+    /*
+    Perform back substitution to solve XU = Y for X,
+    where U is an upper triangular matrix,
+    and overwrite Y.
+    
+    Parameters:
+        U : double pointer
+            Pointer to the upper triangular matrix U.
+        Y : double pointer
+            Pointer to the matrix Y.
+        num_vectors : int
+            Number of vectors in Y.
+        m : int
+            Size of the matrix Y.
+    */
     for (int row = 0; row < num_vectors; row++) {
         Y[row * m + 0] /= U[0 * m + 0];
         for (int j = 1; j < m; j++) {
@@ -29,6 +54,21 @@ void back_substitution(double* U, double* Y, int num_vectors, int m) {
 }
 
 void forward_substitution(double* L, double* Y, int n, int num_vectors) {
+    /*
+    Perform forward substitution to solve LX = Y for X,
+    where L is a lower triangular matrix,
+    and overwrite Y.
+    
+    Parameters:
+        L : double pointer
+            Pointer to the lower triangular matrix L.
+        Y : double pointer
+            Pointer to the matrix Y.
+        n : int
+            Size of the matrix L.
+        num_vectors : int
+            Number of vectors in Y.
+    */
     for (int col = 0; col < num_vectors; col++) {
         for (int i = 1; i < n; i++) {
             double y = Y[i * num_vectors + col];
@@ -40,18 +80,44 @@ void forward_substitution(double* L, double* Y, int n, int num_vectors) {
     }
 }
 
-void matrix_multiply(double* A, double* B, double* C, int n, int m, int p) {
+void matrix_multiply(double* A, double* B, double* C, int n) {
+    /*
+    Perform matrix multiplication A * B = C,
+    and overwrite matrix C.
+    
+    Parameters:
+        A : double pointer
+            Pointer to the matrix A.
+        B : double pointer
+            Pointer to the matrix B.
+        C : double pointer
+            Pointer to the result matrix C.
+        n : int
+            Number of rows, columns in A and B since they are square.
+    */
     for (int i = 0; i < n; i++) {
-        for (int j = 0; j < p; j++) {
-            C[i * p + j] = 0;
-            for (int k = 0; k < m; k++) {
-                C[i * p + j] += A[i * m + k] * B[k * p + j];
+        for (int j = 0; j < n; j++) {
+            C[i * n + j] = 0;
+            for (int k = 0; k < n; k++) {
+                C[i * n + j] += A[i * n + k] * B[k * n + j];
             }
         }
     }
 }
 
 void block_lu(int N, int block_size, double* A) {
+    /*
+    Perform LU decomposition on a block-wise matrix A
+    and overwrite A.
+    
+    Parameters:
+        N : int
+            Size of the matrix A.
+        block_size : int
+            Size of the block.
+        A : double pointer
+            Pointer to the matrix A.
+    */
     for (int idx = 0; idx < N; idx += block_size) {
         double* block_kk = &A[idx * N + idx];
         lu(block_kk, block_size);
@@ -73,7 +139,7 @@ void block_lu(int N, int block_size, double* A) {
                 double* block_kj = &A[idx * N + j];
 
                 double* temp = (double*)malloc(block_size * block_size * sizeof(double));
-                matrix_multiply(block_ik, block_kj, temp, block_size, block_size, block_size);
+                matrix_multiply(block_ik, block_kj, temp, block_size);
                 for (int ii = 0; ii < block_size; ii++) {
                     for (int jj = 0; jj < block_size; jj++) {
                         block_ij[ii * N + jj] -= temp[ii * block_size + jj];
@@ -92,10 +158,8 @@ int main(int argc, char *argv[]) {
     }
 
     int N = atoi(argv[1]); // Matrix size
-    int block_size = N
+    int block_size = N;
     
-
-    omp_set_num_threads(n_threads); 
 
     double* A = (double*)malloc(N * N * sizeof(double));
     if (A == NULL) {
