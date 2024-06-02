@@ -1,90 +1,137 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <omp.h>
+#include <time.h>
 
-#define N 2
-#define BLOCK_SIZE 1
-
-// Function to perform LU factorization with block decomposition
-void block_lu_factorization(double A[N][N]) {
-    // Iterate over blocks
-    for (int block = 0; block < N; block += BLOCK_SIZE) {
-            
-        // Factorize A_kk to L_kk, U_kk) 
-        #pragma omp parallel for
-        for (int k = block; k < block + BLOCK_SIZE; k++) {
-            for (int i = k + 1; i < block + BLOCK_SIZE; i++) {
-                // Factorize A[i][j] into L_kk and U_kk
-                A[i][k] /= A[k][k];
-                for (int j = k + 1; j < block + BLOCK_SIZE ; j++) {
-                    A[i][j] -= A[i][k] * A[k][j];
-                }
-                
+void lu(double* A, int n) {
+    for (int k = 0; k < n; k++) {
+        for (int i = k + 1; i < n; i++) {
+            A[i * n + k] /= A[k * n + k];
+        }
+        for (int i = k + 1; i < n; i++) {
+            #pragma omp parallel for
+            for (int j = k + 1; j < n; j++) {
+                A[i * n + j] -= A[i * n + k] * A[k * n + j];
             }
         }
-        
-        // Solve matrix equations to find L_ik and U_ki in parallel
-        // Update A_ik and A_ki in parallel
-        #pragma omp parallel for collapse(2)
-        for (int i = block + BLOCK_SIZE; i < N; i += BLOCK_SIZE) {
-            for (int j = block; j < block + BLOCK_SIZE; j++) {
-                // Solve matrix equation L_ik * U_kk = A_ik
-                for (int p = block; p < block + BLOCK_SIZE; p++) {
-                    for (int q = block; q < block + BLOCK_SIZE; q++) {
-                        A[i][j] -= A[i][p] * A[p][q] * A[q][j];
-                    }
-                }
-            }
-        }
-        
-        // Compute A’ _ij = A_ij - L_ikU_kj for the remaining blocks
-        #pragma omp parallel for collapse(2)
-        for (int i = block + BLOCK_SIZE; i < N; i += BLOCK_SIZE) {
-            for (int j = block + BLOCK_SIZE; j < N; j += BLOCK_SIZE) {
-                // Update the matrix A' with A_ij - L_ikU_kj
-                for (int p = block; p < block + BLOCK_SIZE; p++) {
-                    for (int q = block; q < block + BLOCK_SIZE; q++) {
-                        for (int r = i; r < i + BLOCK_SIZE; r++) {
-                            for (int s = j; s < j + BLOCK_SIZE; s++) {
-                                A[r][s] -= A[r][p] * A[p][q] * A[q][s];
-                            }
-                        }
-                    }
-                }
-
-            }
-        }
-
     }
 }
 
+void back_substitution(double* U, double* Y, int num_vectors, int m) {
+    for (int row = 0; row < num_vectors; row++) {
+        Y[row * m + 0] /= U[0 * m + 0];
+        for (int j = 1; j < m; j++) {
+            double y = Y[row * m + j];
+            #pragma omp parallel for reduction(-:y)
+            for (int i = 0; i < j; i++) {
+                y -= U[i * m + j] * Y[row * m + i];
+            }
+            Y[row * m + j] = y / U[j * m + j];
+        }
+    }
+}
+
+void forward_substitution(double* L, double* Y, int n, int num_vectors) {
+    for (int col = 0; col < num_vectors; col++) {
+        for (int i = 1; i < n; i++) {
+            double y = Y[i * num_vectors + col];
+            #pragma omp parallel for reduction(-:y)
+            for (int j = 0; j < i; j++) {
+                y -= L[i * n + j] * Y[j * num_vectors + col];
+            }
+            Y[i * num_vectors + col] = y;
+        }
+    }
+}
+
+void matrix_multiply(double* A, double* B, double* C, int n, int m, int p) {
+    #pragma omp parallel for
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < p; j++) {
+            C[i * p + j] = 0;
+            for (int k = 0; k < m; k++) {
+                C[i * p + j] += A[i * m + k] * B[k * p + j];
+            }
+        }
+    }
+}
+
+void block_lu(int N, int block_size, double* A) {
+    for (int idx = 0; idx < N; idx += block_size) {
+        double* block_kk = &A[idx * N + idx];
+        lu(block_kk, block_size);
+
+        for (int i = idx + block_size; i < N; i += block_size) {
+            double* block_ik = &A[i * N + idx];
+            back_substitution(block_kk, block_ik, block_size, block_size);
+        }
+
+        for (int j = idx + block_size; j < N; j += block_size) {
+            double* block_kj = &A[idx * N + j];
+            forward_substitution(block_kk, block_kj, block_size, block_size);
+        }
+
+        for(int i = idx + block_size; i < N; i += block_size) {
+            for(int j = idx + block_size; j < N; j += block_size) {
+                double* block_ij = &A[i * N + j];
+                double* block_ik = &A[i * N + idx];
+                double* block_kj = &A[idx * N + j];
+
+                double* temp = (double*)malloc(block_size * block_size * sizeof(double));
+                matrix_multiply(block_ik, block_kj, temp, block_size, block_size, block_size);
+                #pragma omp parallel for collapse(2)
+                for (int ii = 0; ii < block_size; ii++) {
+                    for (int jj = 0; jj < block_size; jj++) {
+                        block_ij[ii * N + jj] -= temp[ii * block_size + jj];
+                    }
+                }
+                free(temp);
+            }
+        }
+    }
+}
 
 int main() {
-    // Initialize matrix A
-    // double A[N][N] = {
-    //     {7, 2, 5, 0, 1, 9, 0, 3},
-    //     {7, 7, 3, 0, 1, 0, 0, 6},
-    //     {5, 3, 8, 4, 1, 5, 9, 7},
-    //     {9, 7, 6, 3, 3, 0, 8, 7},
-    //     {4, 5, 4, 7, 3, 7, 1, 2},
-    //     {2, 1, 2, 7, 0, 4, 6, 6},
-    //     {3, 1, 0, 1, 9, 0, 1, 4},
-    //     {8, 8, 3, 1, 3, 6, 0, 1}
-    // };
-    double A[N][N] = {{4.0, 4.0},
-                      {4.0, 4.0}};
-    
-    
-    // Perform block LU factorization
-    block_lu_factorization(A);
-    
-    // Print the resulting matrix A
-    printf("Resulting Matrix A:\n");
+    int N = 10000;
+    int block_size = 500;
+
+    double* A = (double*)malloc(N * N * sizeof(double));
+    if (A == NULL) {
+        printf("Memory allocation failed\n");
+        return -1;
+    }
+
+    srand(time(NULL));
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
-            printf("%.2f\t", A[i][j]);
+            A[i * N + j] = rand() % 100 + 1;  // Random values between 1 and 100
         }
-        printf("\n");
     }
-    
+    // double A[9] = {
+    //     1, 2, 3,
+    //     3, 1, 4,
+    //     5, 3, 1
+    // };
+
+    printf("Original matrix A:\n");
+    // for (int i = 0; i < N; i++) {
+    //     for (int j = 0; j < N; j++) {
+    //         printf("%f ", A[i * N + j]);
+    //     }
+    //     printf("\n");
+    // }
+
+    double start_time = omp_get_wtime();
+    block_lu(N, block_size, A);
+    double end_time = omp_get_wtime();
+
+    printf("\nLU-decomposed matrix A:\n");
+    // for (int i = 0; i < N; i++) {
+    //     for (int j = 0; j < N; j++) {
+    //         printf("%f ", A[i * N + j]);
+    //     }
+    //     printf("\n");
+    // }
+    printf("\nExecution Time: %f seconds\n", end_time - start_time);
     return 0;
 }

@@ -2,50 +2,131 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define N 3
-
-double get_time_in_seconds() {
-    return (double)clock() / CLOCKS_PER_SEC;
-}
-
-void printMatrix(double A[N][N]) {
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            printf("%.2f\t", A[i][j]);
+void lu(double* A, int n) {
+    for (int k = 0; k < n; k++) {
+        for (int i = k + 1; i < n; i++) {
+            A[i * n + k] /= A[k * n + k];
         }
-        printf("\n");
+        for (int i = k + 1; i < n; i++) {
+            for (int j = k + 1; j < n; j++) {
+                A[i * n + j] -= A[i * n + k] * A[k * n + j];
+            }
+        }
     }
-    printf("\n");
 }
 
-void lu(double A[N][N]) {
-    for (int k = 0; k < N; k++) {
-        for (int i = k + 1; i < N; i++) {
-            A[i][k] /= A[k][k];
-            for (int j = k + 1; j < N; j++) {
-                A[i][j] -= A[i][k] * A[k][j];
+void back_substitution(double* U, double* Y, int num_vectors, int m) {
+    for (int row = 0; row < num_vectors; row++) {
+        Y[row * m + 0] /= U[0 * m + 0];
+        for (int j = 1; j < m; j++) {
+            double y = Y[row * m + j];
+            for (int i = 0; i < j; i++) {
+                y -= U[i * m + j] * Y[row * m + i];
+            }
+            Y[row * m + j] = y / U[j * m + j];
+        }
+    }
+}
+
+void forward_substitution(double* L, double* Y, int n, int num_vectors) {
+    for (int col = 0; col < num_vectors; col++) {
+        for (int i = 1; i < n; i++) {
+            double y = Y[i * num_vectors + col];
+            for (int j = 0; j < i; j++) {
+                y -= L[i * n + j] * Y[j * num_vectors + col];
+            }
+            Y[i * num_vectors + col] = y;
+        }
+    }
+}
+
+void matrix_multiply(double* A, double* B, double* C, int n, int m, int p) {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < p; j++) {
+            C[i * p + j] = 0;
+            for (int k = 0; k < m; k++) {
+                C[i * p + j] += A[i * m + k] * B[k * p + j];
+            }
+        }
+    }
+}
+
+void block_lu(int N, int block_size, double* A) {
+    for (int idx = 0; idx < N; idx += block_size) {
+        double* block_kk = &A[idx * N + idx];
+        lu(block_kk, block_size);
+
+        for (int i = idx + block_size; i < N; i += block_size) {
+            double* block_ik = &A[i * N + idx];
+            back_substitution(block_kk, block_ik, block_size, block_size);
+        }
+
+        for (int j = idx + block_size; j < N; j += block_size) {
+            double* block_kj = &A[idx * N + j];
+            forward_substitution(block_kk, block_kj, block_size, block_size);
+        }
+
+        for(int i = idx + block_size; i < N; i += block_size) {
+            for(int j = idx + block_size; j < N; j += block_size) {
+                double* block_ij = &A[i * N + j];
+                double* block_ik = &A[i * N + idx];
+                double* block_kj = &A[idx * N + j];
+
+                double* temp = (double*)malloc(block_size * block_size * sizeof(double));
+                matrix_multiply(block_ik, block_kj, temp, block_size, block_size, block_size);
+                for (int ii = 0; ii < block_size; ii++) {
+                    for (int jj = 0; jj < block_size; jj++) {
+                        block_ij[ii * N + jj] -= temp[ii * block_size + jj];
+                    }
+                }
+                free(temp);
             }
         }
     }
 }
 
 int main() {
-    double A[N][N] = {{2.0, 3.0, 1.0},
-                      {6.0, 8.0, 3.0},
-                      {2.0, 5.0, 2.0}};
+    int N = 10000;
+    int block_size = N;
 
-    printf("Original Matrix A:\n");
-    printMatrix(A);
+    double* A = (double*)malloc(N * N * sizeof(double));
+    if (A == NULL) {
+        printf("Memory allocation failed\n");
+        return -1;
+    }
 
-    double start_time = get_time_in_seconds();
-    // LU Decomposition
-    lu(A);
-    double end_time = get_time_in_seconds();
+    srand(time(NULL));
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            A[i * N + j] = rand() % 100 + 1;  // Random values between 1 and 100
+        }
+    }
 
-    printf("LU Decomposed Matrix:\n");
-    printMatrix(A);
+    // double A[9] = {
+    //     1, 2, 3,
+    //     3, 1, 4,
+    //     5, 3, 1
+    // };
 
-    printf("Serial LU factorization time: %f seconds\n", end_time - start_time);
+    printf("Original matrix A:\n");
+    // for (int i = 0; i < N; i++) {
+    //     for (int j = 0; j < N; j++) {
+    //         printf("%f ", A[i * N + j]);
+    //     }
+    //     printf("\n");
+    // }
 
+    double start_time = clock() / CLOCKS_PER_SEC; // Start timer
+    block_lu(N, block_size, A);
+    double end_time = clock() / CLOCKS_PER_SEC;
+
+    printf("\nLU-decomposed matrix A:\n");
+    // for (int i = 0; i < N; i++) {
+    //     for (int j = 0; j < N; j++) {
+    //         printf("%f ", A[i * N + j]);
+    //     }
+    //     printf("\n");
+    // }
+    printf("\nExecution Time: %f seconds\n", end_time - start_time);
     return 0;
 }

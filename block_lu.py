@@ -2,8 +2,8 @@ import numpy as np
 
 def lu(A):
     """
-    Perform decompositon on A
-    and rewrite A
+    Perform serial lu-decompositon on A
+    and overwrite A
     """
     n = A.shape[0]
     for k in range(n):
@@ -18,6 +18,7 @@ def back_substitution(U, Y):
     """
     Perform back substitution to solve XU = Y for X,
     where U is an upper triangular matrix.
+    and overwrite Y
     """
     num_vectors, m = Y.shape
 
@@ -36,6 +37,7 @@ def forward_substitution(L, Y):
     """
     Perform forward substitution to solve LX = Y for X,
     where  is an Lower triangular matrix.
+    and overwrite Y.
     """
     n, num_vectors = Y.shape
     X = np.zeros_like(Y, dtype=np.float64)
