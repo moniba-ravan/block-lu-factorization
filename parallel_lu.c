@@ -15,13 +15,15 @@ void lu(double* A, int n) {
             Size of the matrix A.
     */
     for (int k = 0; k < n; k++) {
+        // vectorized
+        #pragma omp simd
         for (int i = k + 1; i < n; i++) {
             A[i * n + k] /= A[k * n + k];
         }
+        #pragma omp for schedule(dynamic)
         for (int i = k + 1; i < n; i++) {
-            #pragma omp parallel for
             for (int j = k + 1; j < n; j++) {
-                A[i * n + j] -= A[i * n + k] * A[k * n + j];
+                A[i * n + j] -=  A[i * n + k] * A[k * n + j];
             }
         }
     }
@@ -43,11 +45,11 @@ void back_substitution(double* U, double* Y, int num_vectors, int m) {
         m : int
             Size of the matrix Y.
     */
+    #pragma omp parallel for
     for (int row = 0; row < num_vectors; row++) {
         Y[row * m + 0] /= U[0 * m + 0];
         for (int j = 1; j < m; j++) {
             double y = Y[row * m + j];
-            #pragma omp parallel for reduction(-:y)
             for (int i = 0; i < j; i++) {
                 y -= U[i * m + j] * Y[row * m + i];
             }
@@ -72,10 +74,10 @@ void forward_substitution(double* L, double* Y, int n, int num_vectors) {
         num_vectors : int
             Number of vectors in Y.
     */
+    #pragma omp parallel for
     for (int col = 0; col < num_vectors; col++) {
         for (int i = 1; i < n; i++) {
             double y = Y[i * num_vectors + col];
-            #pragma omp parallel for reduction(-:y)
             for (int j = 0; j < i; j++) {
                 y -= L[i * n + j] * Y[j * num_vectors + col];
             }
@@ -99,13 +101,16 @@ void matrix_multiply(double* A, double* B, double* C, int n) {
         n : int
             Number of rows, columns in A and B since they are square.
     */
-    #pragma omp parallel for
+    #pragma omp parallel for simd
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
-            C[i * n + j] = 0;
+            
+            double sum = 0.0;
+            #pragma omp simd reduction(+:sum)
             for (int k = 0; k < n; k++) {
-                C[i * n + j] += A[i * n + k] * B[k * n + j];
+                sum += A[i * n + k] * B[k * n + j];
             }
+            C[i * n + j] = sum;
         }
     }
 }
@@ -124,35 +129,46 @@ void block_lu(int N, int block_size, double* A) {
             Pointer to the matrix A.
     */
     for (int idx = 0; idx < N; idx += block_size) {
+
         double* block_kk = &A[idx * N + idx];
-        lu(block_kk, block_size);
+        lu(block_kk, block_size); 
 
-        for (int i = idx + block_size; i < N; i += block_size) {
-            double* block_ik = &A[i * N + idx];
-            back_substitution(block_kk, block_ik, block_size, block_size);
-        }
-
-        for (int j = idx + block_size; j < N; j += block_size) {
-            double* block_kj = &A[idx * N + j];
-            forward_substitution(block_kk, block_kj, block_size, block_size);
-        }
-
-        for(int i = idx + block_size; i < N; i += block_size) {
-            for(int j = idx + block_size; j < N; j += block_size) {
-                double* block_ij = &A[i * N + j];
+        #pragma omp parallel
+        {
+            #pragma omp for
+            for (int i = idx + block_size; i < N; i += block_size) {
                 double* block_ik = &A[i * N + idx];
-                double* block_kj = &A[idx * N + j];
-
-                double* temp = (double*)malloc(block_size * block_size * sizeof(double));
-                matrix_multiply(block_ik, block_kj, temp, block_size);
-                #pragma omp parallel for collapse(2)
-                for (int ii = 0; ii < block_size; ii++) {
-                    for (int jj = 0; jj < block_size; jj++) {
-                        block_ij[ii * N + jj] -= temp[ii * block_size + jj];
-                    }
-                }
-                free(temp);
+                back_substitution(block_kk, block_ik, block_size, block_size);
             }
+
+            #pragma omp for
+            for (int j = idx + block_size; j < N; j += block_size) {
+                double* block_kj = &A[idx * N + j];
+                forward_substitution(block_kk, block_kj, block_size, block_size);
+            }
+
+            #pragma omp barrier
+
+            #pragma omp for collapse(2) schedule(dynamic)
+            for (int i = idx + block_size; i < N; i += block_size) {
+                for (int j = idx + block_size; j < N; j += block_size) {
+                    double* block_ij = &A[i * N + j];
+                    double* block_ik = &A[i * N + idx];
+                    double* block_kj = &A[idx * N + j];
+
+                    double* temp = (double*)malloc(block_size * block_size * sizeof(double));
+                    matrix_multiply(block_ik, block_kj, temp, block_size);
+                    
+                    #pragma omp simd collapse(2)
+                    for (int ii = 0; ii < block_size; ii++) {
+                        for (int jj = 0; jj < block_size; jj++) {
+                            block_ij[ii * N + jj] -= temp[ii * block_size + jj];
+                        }
+                    }
+                    free(temp);
+                }
+            }
+
         }
     }
 }
@@ -205,24 +221,37 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    srand(time(NULL));
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            A[i * N + j] = rand() % 100 + 1;  // Random values between 1 and 100
+    if (N == 3) {
+        double temp[] = {1.0, 2.0, 3.0, 3.0, 1.0, 4.0, 5.0, 3.0, 1.0};
+        for (int i = 0; i < N * N; i++) {
+            A[i] = temp[i];
+        }
+    } else {
+        srand(time(NULL));
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < N; j++) {
+                A[i * N + j] = rand() % 100 + 1;  // Random values between 1 and 100
+            }
         }
     }
-    
-    // printf("Original matrix A:\n");
-    // display(A, N);
+    if (N == 3) {
+        printf("Original matrix A:\n");
+        display(A, N);
+    }
 
     double start_time = omp_get_wtime();
     block_lu(N, block_size, A);
     double end_time = omp_get_wtime();
 
-    // printf("\nLU-decomposed matrix A:\n");
-    // display(A, N);
+    if (N == 3) {
+        printf("\nLU-decomposed matrix A:\n");
+        display(A, N);
+    }
+   
 
     printf("\nExecution Time: %f seconds\n", end_time - start_time);
-    write_to_file(1, N, block_size, end_time - start_time);
+    write_to_file(n_threads, N, block_size, end_time - start_time);
     return 0;
 }
+
+            

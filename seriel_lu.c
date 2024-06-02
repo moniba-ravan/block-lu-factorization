@@ -214,6 +214,6 @@ int main(int argc, char *argv[]) {
     // display(A, N);
 
     printf("\nExecution Time: %f seconds\n", end_time - start_time);
-    write_to_file(0, N, block_size, end_time - start_time);
+    write_to_file(1, N, block_size, end_time - start_time);
     return 0;
 }

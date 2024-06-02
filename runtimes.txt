@@ -1,4 +1,77 @@
-serial=0 or parallel=1, N, block_size, runtime(s)
-0, 500, 500, 25.49471116065979
-0, 500, 500, 0.00
-1, 500, 500, 0.23
+python=0, seriel_in_c = 1 or parallel=n_threads, N, block_size, runtime(s), details
+0, 500, 500, 25.49471116065979, python
+1, 500, 500, 0.00, c
+4, 500, 500, 0.23
+4, 10000, 10000, 320.93
+4, 10000, 500, 337.02
+4, 10000, 100, 288.56
+4, 10000, 100, 287.41
+4, 10000, 200, 312.01
+4, 10000, 50, 316.36
+3, 10000, 100, 326.45
+4, 3, 3, 0.00, ba'de edit ekhtesasi openmp
+4, 3, 3, 0.00
+4, 3, 3, 0.00
+4, 3, 3, 0.00
+4, 1000, 100, 0.78
+4, 10000, 100, 159.06
+4, 10000, 100, 164.57
+4, 3, 3, 0.00
+4, 3, 3, 0.00
+4, 3, 3, 0.00
+4, 10000, 100, 221.44
+4, 3, 3, 0.00
+4, 10000, 100, 277.14
+4, 3, 3, 0.00
+4, 3, 3, 0.00
+4, 10000, 100, 174.15
+4, 3, 3, 0.00
+4, 10000, 100, 176.28
+4, 3, 3, 0.00
+4, 10000, 100, 440.63, with two collapse in forth step  
+4, 3, 3, 0.00
+4, 10000, 100, 449.24
+4, 10000, 100, 448.91, coll
+4, 3, 3, 0.00
+4, 10000, 100, 131.94, for lu #pragma omp simd and #pragma omp simd collapse(2) used.
+4, 10000, 100, 137.44, again to make sure
+4, 10000, 100, 130.10, for #pragma omp simd and #pragma omp simd in lu, removing one for
+4, 10000, 100, 135.01
+4, 10000, 100, 138.57
+4, 5000, 100, 20.03
+4, 5000, 100, 20.85
+4, 5000, 100, 19.96
+4, 5000, 100, 20.48
+4, 5000, 100, 21.21
+4, 5000, 100, 20.97
+4, 5000, 100, 19.93
+4, 5000, 100, 20.93
+4, 5000, 100, 20.92
+4, 5000, 100, 20.32
+4, 5000, 100, 20.46
+4, 10000, 100, 132.19, jut one schedule dynamic at first and one for
+4, 10000, 100, 130.85, for first loop in lu, #pragma omp simd and #pragma omp collapse(2) schedule(dynamic) for seocnd
+4, 10000, 100, 131.73, again
+4, 5000, 100, 19.93, back with pararel inside each iteration
+4, 5000, 100, 13.06, doing the whole as each Lx=b as one thread
+4, 5000, 100, 14.38
+4, 5000, 100, 13.34
+4, 5000, 100, 19.83, doing the whole as each Lx=b as one thread + pararel inside as well
+4, 10000, 100, 129.46, same structure for higher value
+4, 10000, 100, 104.22, removed one extra pararell inside
+4, 10000, 100, 103.72 same 
+4, 10000, 100, 105.13, lu use for parallel
+4, 10000, 100, 102.79, same with schedule
+4, 10000, 100, 102.04
+4, 10000, 100, 107.37
+4, 10000, 100, 104.63
+4, 10000, 100, 104.15
+4, 10000, 100, 135.40
+4, 10000, 100, 138.13
+4, 10000, 100, 46.24, wow changing C[i * n + j] to sum in matrix multi
+4, 10000, 100, 45.65, same
+4, 10000, 100, 45.11
+4, 10000, 100, 48.96
+4, 10000, 100, 42.88, block lu : adding schedule(dynamic) in first iteration, #pragma omp simd collapse(2) for second
+4, 10000, 100, 42.47, same
+4, 3, 3, 0.00
