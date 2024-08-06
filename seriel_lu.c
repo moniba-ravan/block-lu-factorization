@@ -353,7 +353,13 @@ int main(int argc, char *argv[]) {
     printf("> Done!\n");
     double end_time = clock() / CLOCKS_PER_SEC;
     
-    
+     printf("\n> Execution Time: %f seconds\n", end_time - start_time);
+    if( origin_N < 5 ){
+        printf("\n> Original Matirx A:\n");
+        display(0, 0, origin_A, origin_N, origin_N);
+        printf("\n> L & U stored in one Matrix:\n");
+        display(0, 0, A, N, origin_N);
+    }
    
     // evaluate the solution
     if (eval){
@@ -374,13 +380,7 @@ int main(int argc, char *argv[]) {
         check_matrix(origin_A, made_A, origin_N, tol);
         free(made_A);
     }
-    printf("\n> Execution Time: %f seconds\n", end_time - start_time);
-    if( origin_N < 5 ){
-        printf("\n> Original Matirx A:\n");
-        display(0, 0, origin_A, origin_N, origin_N);
-        printf("\n> L & U stored in one Matrix:\n");
-        display(0, 0, A, N, origin_N);
-    }
+   
 
     // Store the timing 
     write_to_file(0, origin_N, block_size, end_time - start_time);
