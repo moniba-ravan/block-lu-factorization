@@ -363,6 +363,7 @@ int main(int argc, char *argv[]) {
         printf("Usage: %s N block_size n_threads\n", argv[0]);
         return 1;
     }
+    int eval = 1; // 1 if we want to evaluate the algorithm, otherwise 0
     int N = atoi(argv[1]); // Matrix size
     int block_size = atoi(argv[2]); // Block size
     int n_threads = atoi(argv[3]); // Number of threads
@@ -402,22 +403,7 @@ int main(int argc, char *argv[]) {
     
     
    
-    // evaluate the solution
-    // Correctness
-    double* made_A = (double*)malloc(origin_N * origin_N * sizeof(double));
-    if (made_A == NULL) {
-        printf("Memory allocation failed\n");
-        return -1;
-    }
-    // For demonstration purposes, recombine L and U to verify correctness
-
-    // made_A <- L@U which L and U are stored in A
-    matrix_multiply_LU(A, made_A, N, origin_N);
     
-    double tol = 1e-6;
-    printf("\n> Check if L @ U is equal to A: ");
-    check_matrix(origin_A, made_A, origin_N, tol);
-
     printf("\n> Execution Time: %f seconds\n", end_time - start_time);
     if( origin_N < 5 ){
         printf("\n> Original Matirx A:\n");
@@ -431,7 +417,7 @@ int main(int argc, char *argv[]) {
 
     free(A);
     free(origin_A);
-    free(made_A);
+    
     return 0;
 }
 
