@@ -208,7 +208,7 @@ void block_lu(int N, int block_size, double* A) {
             for (int j = idx + block_size; j < N; j += block_size) {
                 // L_ii.U_ij = A_ij
                 forward_substitution(idx, j, A, N, block_size);
-                ;
+                
             }
             
 
@@ -400,7 +400,7 @@ int main(int argc, char *argv[]) {
     double start_time = omp_get_wtime();
     printf("\n> Calculating L & U:\n");
     block_lu(N, block_size, A);
-    printf("\n> Done!:\n");
+    printf("> Done!\n");
     double end_time = omp_get_wtime();
     
     
@@ -420,7 +420,7 @@ int main(int argc, char *argv[]) {
         matrix_multiply_LU(A, made_A, N, origin_N);
         
         double tol = 1e-6;
-        printf("\n> Check if L @ U is equal to A: ");
+        printf("> Check if L @ U is equal to A: ");
         check_matrix(origin_A, made_A, origin_N, tol);
         free(made_A);
     }

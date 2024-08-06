@@ -348,9 +348,9 @@ int main(int argc, char *argv[]) {
         }
     
     double start_time = clock() / CLOCKS_PER_SEC; // Start timer
-     printf("\n> Calculating L & U:\n");
+    printf("\n> Calculating L & U:\n");
     block_lu(N, block_size, A);
-    printf("\n> Done!:\n");
+    printf("> Done!\n");
     double end_time = clock() / CLOCKS_PER_SEC;
     
     
@@ -370,7 +370,7 @@ int main(int argc, char *argv[]) {
         matrix_multiply_LU(A, made_A, N, origin_N);
         
         double tol = 1e-6;
-        printf("\n> Check if L @ U is equal to A: ");
+        printf("> Check if L @ U is equal to A: ");
         check_matrix(origin_A, made_A, origin_N, tol);
         free(made_A);
     }
