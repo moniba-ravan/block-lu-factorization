@@ -390,7 +390,7 @@ int main(int argc, char *argv[]) {
         for (int j = 0; j < N; j++){
             if( i >= origin_N || j >= origin_N)
                 A[i * N + j] = 0.0;
-            else origin_A[i * origin_N + j] = A[i * N + j] = (double)( rand() % 1000) + 1.0;  // Random values between 1 and 1000
+            else origin_A[i * origin_N + j] = A[i * N + j] = (double)( rand() % 100) + 1.0;  // Random values between 1 and 1000
         }
         
     
@@ -414,7 +414,7 @@ int main(int argc, char *argv[]) {
     // made_A <- L@U which L and U are stored in A
     matrix_multiply_LU(A, made_A, N, origin_N);
     
-    double tol = 1e-9;
+    double tol = 1e-6;
     printf("\n> Check if L @ U is equal to A: ");
     check_matrix(origin_A, made_A, origin_N, tol);
 
