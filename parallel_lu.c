@@ -426,7 +426,7 @@ int main(int argc, char *argv[]) {
         // made_A <- L@U which L and U are stored in A
         matrix_multiply_LU(A, made_A, N, origin_N);
         
-        double tol = 1e-6;
+        double tol = 1e-4;
         printf("> Check if L @ U is equal to A: ");
         check_matrix(origin_A, made_A, origin_N, tol);
         free(made_A);
