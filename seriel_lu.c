@@ -348,13 +348,16 @@ int main(int argc, char *argv[]) {
         }
     
     double start_time = clock() / CLOCKS_PER_SEC; // Start timer
+     printf("\n> Calculating L & U:\n");
     block_lu(N, block_size, A);
+    printf("\n> Done!:\n");
     double end_time = clock() / CLOCKS_PER_SEC;
     
     
    
     // evaluate the solution
     if (eval){
+        printf("\n> Evaluationg the algorithm:\n");
         // Correctness
         double* made_A = (double*)malloc(origin_N * origin_N * sizeof(double));
         if (made_A == NULL) {

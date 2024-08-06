@@ -398,12 +398,32 @@ int main(int argc, char *argv[]) {
     
     
     double start_time = omp_get_wtime();
+    printf("\n> Calculating L & U:\n");
     block_lu(N, block_size, A);
+    printf("\n> Done!:\n");
     double end_time = omp_get_wtime();
     
     
    
-    
+    // evaluate the solution
+    if (eval){
+        printf("\n> Evaluationg the algorithm:\n");
+        // Correctness
+        double* made_A = (double*)malloc(origin_N * origin_N * sizeof(double));
+        if (made_A == NULL) {
+            printf("Memory allocation failed\n");
+            return -1;
+        }
+        // For demonstration purposes, recombine L and U to verify correctness
+
+        // made_A <- L@U which L and U are stored in A
+        matrix_multiply_LU(A, made_A, N, origin_N);
+        
+        double tol = 1e-6;
+        printf("\n> Check if L @ U is equal to A: ");
+        check_matrix(origin_A, made_A, origin_N, tol);
+        free(made_A);
+    }
     printf("\n> Execution Time: %f seconds\n", end_time - start_time);
     if( origin_N < 5 ){
         printf("\n> Original Matirx A:\n");
