@@ -390,7 +390,7 @@ int main(int argc, char *argv[]) {
         for (int j = 0; j < N; j++){
             if( i >= origin_N || j >= origin_N)
                 A[i * N + j] = 0.0;
-            else origin_A[i * origin_N + j] = A[i * N + j] = (double)( rand() % 100) + 1.0;  // Random values between 1 and 1000
+            else origin_A[i * origin_N + j] = A[i * N + j] = (double)( rand() % 100) + 1.0;  // Random values between 1 and 100
         }
         
     
