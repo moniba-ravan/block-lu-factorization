@@ -84,7 +84,7 @@ def block_lu(N, block_size, A):
         for i in range(idx + block_size, N, block_size):
             block_ik = A[i: i + block_size, idx: idx + block_size]
             back_substitution(block_kk, block_ik)
-
+            
         for j in range(idx + block_size, N, block_size):
             block_kj = A[idx: idx + block_size, j: j + block_size]
             forward_substitution(block_kk, block_kj)
