@@ -120,7 +120,7 @@ void matrix_multiply_LU(double* A, double* C, int n, int origin_n) {
         n : int
             Size of the matrices A and B (they are square matrices).
     */
-    #pragma omp parallel for simd
+    #pragma omp parallel for
     for (int i = 0; i < origin_n; i++) {
         for (int j = 0; j < origin_n; j++) {
             double sum = 0.0, x = 0.0, y = 0.0;
@@ -161,7 +161,7 @@ void matrix_multiply(int idx_idx, int idx_i, int idx_j, double* A, double* C, in
         block_size : int
             Size of the block for matrix multiplication.
     */
-    #pragma omp parallel for simd
+    #pragma omp parallel for 
     for (int i = 0; i < block_size; i++) {
         for (int j = 0; j < block_size; j++) {
             double sum = 0.0;
@@ -175,68 +175,54 @@ void matrix_multiply(int idx_idx, int idx_i, int idx_j, double* A, double* C, in
 }
 
 void block_lu(int N, int block_size, double* A) {
-    /*
-    Perform block-wise LU decomposition on matrix A and overwrite A.
-
-    Parameters:
-        N : int
-            Size of the matrix A.
-        block_size : int
-            Size of the block for LU decomposition.
-        A : double pointer
-            Pointer to the matrix A.
-    */
-
     for (int idx = 0; idx < N; idx += block_size) {
+        lu(idx, A, N, block_size);
 
-        
-        lu(idx, A, N, block_size); 
-        
-        
+
         #pragma omp parallel
         {
-            #pragma omp for
-            for (int j = idx + block_size; j < N; j += block_size) {
-                // L_ji.U_ii = A_ji
-                back_substitution(idx, j, A, N, block_size);
-                
-            }
-            
-
-            
-            #pragma omp for
-            for (int j = idx + block_size; j < N; j += block_size) {
-                // L_ii.U_ij = A_ij
-                forward_substitution(idx, j, A, N, block_size);
-                
-            }
-            
-
-            #pragma omp barrier
-
-            #pragma omp for collapse(2) schedule(dynamic)
-            for (int i = idx + block_size; i < N; i += block_size) {
+            #pragma omp single nowait
+            {
                 for (int j = idx + block_size; j < N; j += block_size) {
-                   
-                    double* temp = (double*)malloc(block_size * block_size * sizeof(double));
-                    matrix_multiply(idx, i, j, A, temp, N, block_size);
-                    
-                    
-                    #pragma omp simd collapse(2)
-                    for (int ii = 0; ii < block_size; ii++) {
-                        for (int jj = 0; jj < block_size; jj++) {
-                            // double* block_ij = &A[i * N + j];
-                            A[(ii + i)* N + (jj + j)] -= temp[ii * block_size + jj];
+                    #pragma omp task firstprivate(j)
+                    {
+                        back_substitution(idx, j, A, N, block_size);
+                    }
+
+
+                    #pragma omp task firstprivate(j)
+                    {
+                        forward_substitution(idx, j, A, N, block_size);
+                    }
+                }
+
+
+                #pragma omp taskwait
+
+
+                for (int i = idx + block_size; i < N; i += block_size) {
+                    for (int j = idx + block_size; j < N; j += block_size) {
+                        #pragma omp task firstprivate(i, j)
+                        {
+                            double* temp = (double*)malloc(block_size * block_size * sizeof(double));
+                            matrix_multiply(idx, i, j, A, temp, N, block_size);
+
+
+                            #pragma omp simd collapse(2)
+                            for (int ii = 0; ii < block_size; ii++) {
+                                for (int jj = 0; jj < block_size; jj++) {
+                                    A[(ii + i) * N + (jj + j)] -= temp[ii * block_size + jj];
+                                }
+                            }
+                            free(temp);
                         }
                     }
-                    free(temp);
                 }
             }
-        
-        
         }
     }
 }
+
 
 void display(int idx_i, int idx_j, double* A, int n, int block_size) {
     /*
